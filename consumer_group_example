@@ -1,0 +1,132 @@
+package main
+
+import (
+	"context"
+	"log"
+	"os"
+	"os/signal"
+	"strings"
+	"sync"
+	"syscall"
+
+	"github.com/IBM/sarama"
+	elasticsearch "github.com/elastic/go-elasticsearch/v8"
+	"github.com/joho/godotenv"
+)
+
+func main() {
+	// Load environment variables
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	kafkaBrokers := os.Getenv("KAFKA_SERVER")
+	esURL := os.Getenv("ES_SERVER")
+	esUser := os.Getenv("ES_USER")
+	esPassword := os.Getenv("ES_PASSWORD")
+
+	// Kafka configuration
+	kafkaConfig := sarama.NewConfig()
+	kafkaConfig.Consumer.Offsets.Initial = sarama.OffsetNewest
+	kafkaConfig.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
+
+	// Create Kafka Consumer Group
+	client, err := sarama.NewConsumerGroup(strings.Split(kafkaBrokers, ","), "my-consumer-group", kafkaConfig)
+	if err != nil {
+		log.Fatalf("Error creating consumer group client: %s", err)
+	}
+	defer client.Close()
+
+	// Create Elasticsearch client
+	esCfg := elasticsearch.Config{
+		Addresses: []string{esURL},
+		Username:  esUser,
+		Password:  esPassword,
+	}
+	es, err := elasticsearch.NewClient(esCfg)
+	if err != nil {
+		log.Fatalf("Error creating Elasticsearch client: %s", err)
+	}
+
+	// Create a context to control the consumer group lifecycle
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Create a wait group to wait for all goroutines to finish
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	// Define topics to consume
+	topics := []string{"MV-NODE-5MIN-BB", "MV-NODE-1MIN-BB"}
+
+	// Create a new instance of the handler with the Elasticsearch client
+	handler := &MyConsumerGroupHandler{
+		es: es,
+	}
+
+	// Start the consumer group in a goroutine
+	go func() {
+		defer wg.Done()
+		for {
+			if err := client.Consume(ctx, topics, handler); err != nil {
+				log.Printf("Error from consumer: %v", err)
+			}
+			if ctx.Err() != nil {
+				return
+			}
+		}
+	}()
+
+	// Handle system signals for graceful shutdown
+	sigterm := make(chan os.Signal, 1)
+	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
+	select {
+	case <-sigterm:
+		log.Println("Received termination signal, initiating shutdown")
+		cancel()
+	}
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+}
+
+// MyConsumerGroupHandler handles Kafka messages and processes them.
+type MyConsumerGroupHandler struct {
+	es *elasticsearch.Client
+}
+
+// Setup is run at the beginning of a new session, before ConsumeClaim.
+func (h *MyConsumerGroupHandler) Setup(_ sarama.ConsumerGroupSession) error {
+	return nil
+}
+
+// Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited.
+func (h *MyConsumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error {
+	return nil
+}
+
+// ConsumeClaim processes each message from Kafka.
+func (h *MyConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	for message := range claim.Messages() {
+		log.Printf("Message claimed: value = %s, timestamp = %v, topic = %s", string(message.Value), message.Timestamp, message.Topic)
+
+		// Process message based on the topic
+		switch message.Topic {
+		case "MV-NODE-5MIN-BB":
+			processMvNodeMessage(h.es, message.Value)
+		case "MV-NODE-1MIN-BB":
+			processMvNodeMessage(h.es, message.Value)
+		default:
+			log.Printf("Unhandled topic: %s", message.Topic)
+		}
+
+		// Mark the message as processed
+		session.MarkMessage(message, "")
+	}
+	return nil
+}
+
+func processMvNodeMessage(es *elasticsearch.Client, message []byte) {
+	// Here you can unmarshal and process the message, then send it to Elasticsearch
+	log.Printf("Processing message: %s", message)
+}
