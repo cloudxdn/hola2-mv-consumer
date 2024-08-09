@@ -28,7 +28,7 @@ func main() {
 	esUser := os.Getenv("ES_USER")
 	esPassword := os.Getenv("ES_PASSWORD")
 
-	consumer, err := sarama.NewConsumer(strings.Split(kafkaBrokers, ","), nil)
+	consumer, err := sarama.NewConsumer([]string{kafkaBrokers}, nil)
 	if err != nil {
 		log.Fatalf("Error creating Kafka consumer: %s", err)
 	}
