@@ -123,7 +123,7 @@ func bulkIndexMessages(messages []MvInterfaceMsg, es *elasticsearch.Client, topi
 
 	for _, msg := range messages {
 		msg.Timestamp = time.Now().UTC().Format(time.RFC3339)
-		meta := []byte(fmt.Sprintf(`{ "create" : { "_index" : "%s" } }%s`, strings.ToLower(topic), "\n"))
+		meta := []byte(fmt.Sprintf(`{ "create" : { "_id": "%s", "_index" : "%s" } }%s`, string(rune(msg.EquipID))+string(msg.Ctime), strings.ToLower(topic), "\n"))
 		data, err := json.Marshal(msg)
 		if err != nil {
 			log.Printf("Error marshalling message: %s", err)
