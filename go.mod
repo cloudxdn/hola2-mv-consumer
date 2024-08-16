@@ -2,8 +2,6 @@ module hola2-mv-consumer
 
 go 1.22.1
 
-require github.com/olivere/elastic/v7 v7.0.32
-
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/eapache/go-resiliency v1.6.0 // indirect
