@@ -19,7 +19,6 @@ import (
 func main() {
 
 	err := godotenv.Load(".env")
-
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
@@ -53,7 +52,9 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	topics := []string{"MV-NODE-5MIN-BB", "MV-NODE-1MIN-BB", "MV-NODE-5MIN-BH", "MV-NODE-1MIN-BH", "MV-INTERFACE-5MIN-BB", "MV-INTERFACE-1MIN-BB", "MV-INTERFACE-5MIN-BH", "MV-INTERFACE-1MIN-BH", "FM-EVENT-BB", "FM-EVENT-BH"}
+	// topics := []string{"MV-NODE-5MIN-BB", "MV-NODE-1MIN-BB", "MV-NODE-5MIN-BH", "MV-NODE-1MIN-BH", "MV-INTERFACE-5MIN-BB", "MV-INTERFACE-1MIN-BB", "MV-INTERFACE-5MIN-BH", "MV-INTERFACE-1MIN-BH", "FM-EVENT-BB", "FM-EVENT-BH"}
+
+	topics := []string{"MV-NODE-1MIN-BB", "MV-NODE-5MIN-BB", "MV-NODE-5MIN-BH", "MV-INTERFACE-5MIN-BB", "MV-INTERFACE-5MIN-BH"}
 
 	for _, topic := range topics {
 		wg.Add(1)

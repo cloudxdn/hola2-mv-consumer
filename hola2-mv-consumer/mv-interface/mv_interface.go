@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"hola2-mv-consumer/common"
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -52,37 +53,37 @@ func parseMvInterfaceMessage(message string) (MvInterfaceMsg, error) {
 
 	return MvInterfaceMsg{
 		Ctime:             fields[0],
-		EquipID:           common.ParseInt(fields[1]),
+		EquipID:           common.ParseInt64(fields[1]),
 		EquipAddr:         fields[2],
 		SysName:           fields[3],
-		Pkey:              common.ParseInt(fields[4]),
-		OctetsIn:          common.ParseInt(fields[5]),
-		OctetsOut:         common.ParseInt(fields[6]),
+		Pkey:              common.ParseInt64(fields[4]),
+		OctetsIn:          common.ParseInt64(fields[5]),
+		OctetsOut:         common.ParseInt64(fields[6]),
 		UtilIn:            common.ParseFloat(fields[7]),
 		UtilOut:           common.ParseFloat(fields[8]),
-		UpktsIn:           common.ParseInt(fields[9]),
-		UpktsOut:          common.ParseInt(fields[10]),
-		NupktsIn:          common.ParseInt(fields[11]),
-		NupktsOut:         common.ParseInt(fields[12]),
-		OctetsBpsIn:       common.ParseInt(fields[13]),
-		OctetsBpsOut:      common.ParseInt(fields[14]),
-		OctetsPpsIn:       common.ParseInt(fields[15]),
-		OctetsPpsOut:      common.ParseInt(fields[16]),
-		ErrorsIn:          common.ParseInt(fields[17]),
-		ErrorsOut:         common.ParseInt(fields[18]),
+		UpktsIn:           common.ParseInt64(fields[9]),
+		UpktsOut:          common.ParseInt64(fields[10]),
+		NupktsIn:          common.ParseInt64(fields[11]),
+		NupktsOut:         common.ParseInt64(fields[12]),
+		OctetsBpsIn:       common.ParseInt64(fields[13]),
+		OctetsBpsOut:      common.ParseInt64(fields[14]),
+		OctetsPpsIn:       common.ParseInt64(fields[15]),
+		OctetsPpsOut:      common.ParseInt64(fields[16]),
+		ErrorsIn:          common.ParseInt64(fields[17]),
+		ErrorsOut:         common.ParseInt64(fields[18]),
 		ErrorIn:           common.ParseFloat(fields[19]),
 		ErrorOut:          common.ParseFloat(fields[20]),
-		DiscardsIn:        common.ParseInt(fields[21]),
-		DiscardsOut:       common.ParseInt(fields[22]),
+		DiscardsIn:        common.ParseInt64(fields[21]),
+		DiscardsOut:       common.ParseInt64(fields[22]),
 		DiscardIn:         common.ParseFloat(fields[23]),
 		DiscardOut:        common.ParseFloat(fields[24]),
-		Crc:               common.ParseInt(fields[25]),
-		Collision:         common.ParseInt(fields[26]),
-		IfUnknownProtosIn: common.ParseInt(fields[27]),
-		McastPktsIn:       common.ParseInt(fields[28]),
-		McastPktsOut:      common.ParseInt(fields[29]),
-		QdropsIn:          common.ParseInt(fields[30]),
-		QdropsOut:         common.ParseInt(fields[31]),
+		Crc:               common.ParseInt64(fields[25]),
+		Collision:         common.ParseInt64(fields[26]),
+		IfUnknownProtosIn: common.ParseInt64(fields[27]),
+		McastPktsIn:       common.ParseInt64(fields[28]),
+		McastPktsOut:      common.ParseInt64(fields[29]),
+		QdropsIn:          common.ParseInt64(fields[30]),
+		QdropsOut:         common.ParseInt64(fields[31]),
 		RxPower:           common.ParseFloat(fields[32]),
 		TxPower:           common.ParseFloat(fields[33]),
 		RxLane1:           common.ParseFloat(fields[34]),
@@ -122,8 +123,9 @@ func bulkIndexMessages(messages []MvInterfaceMsg, es *elasticsearch.Client, topi
 	var buf bytes.Buffer
 
 	for _, msg := range messages {
+		pkey := strconv.FormatInt(msg.Pkey, 10)
 		msg.Timestamp = time.Now().UTC().Format(time.RFC3339)
-		meta := []byte(fmt.Sprintf(`{ "create" : { "_id": "%s", "_index" : "%s" } }%s`, string(rune(msg.EquipID))+string(msg.Ctime), strings.ToLower(topic), "\n"))
+		meta := []byte(fmt.Sprintf(`{ "create" : { "_id": "%s", "_index" : "%s" } }%s`, pkey+string(msg.Ctime), strings.ToLower(topic), "\n"))
 		data, err := json.Marshal(msg)
 		if err != nil {
 			log.Printf("Error marshalling message: %s", err)
@@ -150,10 +152,13 @@ func bulkIndexMessages(messages []MvInterfaceMsg, es *elasticsearch.Client, topi
 	var resBody map[string]interface{}
 	if err := json.NewDecoder(res.Body).Decode(&resBody); err != nil {
 		log.Printf("Error parsing the response body: %s", err)
+	} else {
+		// 전체 응답을 출력하여 디버깅
+		log.Printf("Elasticsearch response: %+v", resBody)
 	}
 
 	if res.IsError() {
-		log.Printf("Error indexing %s batch: %s", topic, res.String())
+		log.Printf("Error indexing %s batch: %s, Status: %d", topic, res.String(), res.StatusCode)
 	} else {
 		log.Printf("Successfully indexed batch %s of %d messages", topic, len(messages))
 	}

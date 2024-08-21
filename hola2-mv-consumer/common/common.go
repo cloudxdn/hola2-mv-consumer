@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	BufferPeriod = 5 * time.Second
+	BufferPeriod = 10 * time.Second
 )
 
 func ParseInt(s string) int {
