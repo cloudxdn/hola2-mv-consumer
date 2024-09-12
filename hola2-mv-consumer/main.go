@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/tls"
-	fmevent "hola2-mv-consumer/fm-event"
 	mvinterface "hola2-mv-consumer/mv-interface"
 	mvnode "hola2-mv-consumer/mv-node"
 	"log"
@@ -54,7 +53,7 @@ func main() {
 
 	// topics := []string{"MV-NODE-5MIN-BB", "MV-NODE-1MIN-BB", "MV-NODE-5MIN-BH", "MV-NODE-1MIN-BH", "MV-INTERFACE-5MIN-BB", "MV-INTERFACE-1MIN-BB", "MV-INTERFACE-5MIN-BH", "MV-INTERFACE-1MIN-BH", "FM-EVENT-BB", "FM-EVENT-BH"}
 
-	topics := []string{"MV-NODE-1MIN-BB", "MV-NODE-5MIN-BB", "MV-NODE-5MIN-BH", "MV-INTERFACE-5MIN-BB", "MV-INTERFACE-5MIN-BH"}
+	topics := []string{"MV-NODE-1MIN-BB", "MV-NODE-1MIN-BH", "MV-NODE-5MIN-BB", "MV-NODE-5MIN-BH", "MV-INTERFACE-5MIN-BB", "MV-INTERFACE-5MIN-BH"}
 
 	for _, topic := range topics {
 		wg.Add(1)
@@ -65,8 +64,6 @@ func main() {
 				mvnode.ProcessTopicMvNode(consumer, es, topic)
 			case strings.HasPrefix(topic, "MV-INTERFACE"):
 				mvinterface.ProcessTopicMvInterface(consumer, es, topic)
-			case strings.HasPrefix(topic, "FM-EVENT"):
-				fmevent.ProcessTopicFmEvent(consumer, es, topic)
 			default:
 				log.Printf("No handler for topic: %s", topic)
 			}

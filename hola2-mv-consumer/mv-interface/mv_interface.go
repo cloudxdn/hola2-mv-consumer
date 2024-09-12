@@ -123,9 +123,8 @@ func bulkIndexMessages(messages []MvInterfaceMsg, es *elasticsearch.Client, topi
 	var buf bytes.Buffer
 
 	for _, msg := range messages {
-		pkey := strconv.FormatInt(msg.Pkey, 10)
 		msg.Timestamp = time.Now().UTC().Format(time.RFC3339)
-		meta := []byte(fmt.Sprintf(`{ "create" : { "_id": "%s", "_index" : "%s" } }%s`, pkey+string(msg.Ctime), strings.ToLower(topic), "\n"))
+		meta := []byte(fmt.Sprintf(`{ "index" : { "_id": "%s", "_index" : "%s" } }%s`, strconv.FormatInt(msg.Pkey, 10)+msg.Ctime, strings.ToLower(topic), "\n"))
 		data, err := json.Marshal(msg)
 		if err != nil {
 			log.Printf("Error marshalling message: %s", err)
@@ -152,9 +151,6 @@ func bulkIndexMessages(messages []MvInterfaceMsg, es *elasticsearch.Client, topi
 	var resBody map[string]interface{}
 	if err := json.NewDecoder(res.Body).Decode(&resBody); err != nil {
 		log.Printf("Error parsing the response body: %s", err)
-	} else {
-		// 전체 응답을 출력하여 디버깅
-		log.Printf("Elasticsearch response: %+v", resBody)
 	}
 
 	if res.IsError() {
